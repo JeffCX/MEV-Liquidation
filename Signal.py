@@ -1,19 +1,30 @@
-import requests
 import json
+import time
+import traceback
+from apscheduler.triggers.cron import CronTrigger
+from datetime import datetime
+from config import *
+from apscheduler.schedulers.background import BackgroundScheduler
+from SignalUtils import *
 
-def get_alpha_account(
-    network='kovan', 
-    page_size=50,
-    health=1
-):
-    url = f'https://api.compound.finance/api/v2/account?max_health[value]={health}&network={network}&page_size={50}'
-    resp = requests.get(url).json()
-    return resp
+def get_account():
+    try:
+        resp = get_alpha_account()['accounts']
+        result = select_token_to_liquidate_by_account(
+            resp,
+            token_filter='cETH',
+            balance_threshold=2
+        )
+        print(json.dumps(result, indent=4))
+    except:
+        error = traceback.format()
+        print(error)
 
-def select_token_to_liquidate_by_account(entry):
-    
 
-if __name__ == "__main__":
-    resp = get_alpha_account()['accounts']
-    print(resp[0][0])
-    # print(json.dumps(resp, indent=4))
+scheduler = BackgroundScheduler()
+crontab_expression = '* * * * *' # every minute
+scheduler.add_job(get_account, CronTrigger.from_crontab(crontab_expression))
+scheduler.start()
+
+while True:
+    time.sleep(1)
